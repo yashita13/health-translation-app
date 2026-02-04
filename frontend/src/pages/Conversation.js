@@ -17,6 +17,7 @@ import {
 import AudioRecorder from "../components/AudioRecorder";
 
 const STORAGE_KEY = "active_conversation";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 export default function Conversation() {
     const [conversation, setConversation] = useState(null);
@@ -208,6 +209,14 @@ export default function Conversation() {
                                             </Typography>
 
                                         </Typography>
+                                        {msg.audioUrl && (
+                                            <audio
+                                                controls
+                                                src={`${API_BASE_URL}${msg.audioUrl}`}
+                                                style={{ marginTop: 8, width: "100%" }}
+                                            />
+                                        )}
+
 
                                     </CardContent>
                                 </Card>
@@ -254,6 +263,8 @@ export default function Conversation() {
                                         senderRole: role,
                                         originalText: data.transcription,
                                         translatedText: data.translated,
+                                        audioUrl: data.audioUrl,
+                                        timestamp: new Date().toISOString(),
                                     },
                                 ];
                                 const updatedConversation = {

@@ -40,10 +40,7 @@ class TranslationService {
         };
     }
 
-    /**
-     * SAFE translation (no async, no API, no crashes)
-     * Always returns a translated string
-     */
+
     translateText(text, targetLanguage) {
         if (!text || !targetLanguage) return text;
 
