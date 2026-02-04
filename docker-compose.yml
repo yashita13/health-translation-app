@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:6
+    container_name: healthcare-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+
+  backend:
+    build: ./backend
+    container_name: healthcare-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build: ./frontend
+    container_name: healthcare-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
