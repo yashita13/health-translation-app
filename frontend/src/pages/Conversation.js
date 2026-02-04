@@ -275,7 +275,6 @@ export default function Conversation() {
                                     );
 
                                 const hasText = originalText.trim() || translatedText.trim();
-                                const isAudioOnly = msg?.audioUrl && !hasText;
                                 return (
                                     <Box
                                         key={msg.id}
