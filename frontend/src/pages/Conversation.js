@@ -186,6 +186,7 @@ export default function Conversation() {
                                         >
                                             {msg.senderRole}
                                         </Typography>
+
                                         <Typography sx={{ mt: 0.5 }}>
                                             {msg.originalText}
                                         </Typography>
@@ -197,7 +198,17 @@ export default function Conversation() {
                                             }}
                                         >
                                             {msg.translatedText}
+                                            <Typography
+                                                variant="caption"
+                                                sx={{ opacity: 0.6, display: "block", mt: 0.5 }}
+                                            >
+                                                {msg.timestamp
+                                                    ? new Date(msg.timestamp).toLocaleString()
+                                                    : new Date().toLocaleString()}
+                                            </Typography>
+
                                         </Typography>
+
                                     </CardContent>
                                 </Card>
                             </Box>
