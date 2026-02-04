@@ -115,10 +115,10 @@ app.post("/api/auth/login", (req, res) => {
 
 // ==================== TRANSLATION ====================
 
-app.post("/api/translate/text", (req, res) => {
+app.post("/api/translate/text", async (req, res) => {
     const { text, targetLanguage } = req.body;
 
-    const translated = translationService.translateText(
+    const translated = await translationService.translateText(
         text,
         targetLanguage
     );
@@ -132,36 +132,34 @@ app.post("/api/translate/text", (req, res) => {
     });
 });
 
+
 // ==================== AUDIO ====================
 
-app.post(
-    "/api/translate/audio",
-    upload.single("audio"),
-    (req, res) => {
-        if (!req.file) {
-            return res
-                .status(400)
-                .json({ success: false, message: "No audio file" });
-        }
-
-        const { senderRole, targetLanguage } = req.body;
-
-        const transcription =
-            translationService.transcribeAudio(senderRole);
-
-        const translated = translationService.translateText(
-            transcription,
-            targetLanguage
-        );
-
-        res.json({
-            success: true,
-            audioUrl: `/uploads/audio/${req.file.filename}`,
-            transcription,
-            translated,
-            timestamp: new Date().toISOString(),
-        });
+app.post("/api/translate/audio", upload.single("audio"), async (req, res) => {
+    if (!req.file) {
+        return res
+            .status(400)
+            .json({ success: false, message: "No audio file" });
     }
+
+    const { senderRole, targetLanguage } = req.body;
+
+    const transcription =
+        translationService.transcribeAudio(senderRole);
+
+    const translated = await translationService.translateText(
+        transcription,
+        targetLanguage
+    );
+
+    res.json({
+        success: true,
+        audioUrl: `/uploads/audio/${req.file.filename}`,
+        transcription,
+        translated,
+        timestamp: new Date().toISOString(),
+    });
+}
 );
 
 // ==================== CONVERSATIONS ====================
@@ -187,7 +185,7 @@ app.post("/api/conversations", (req, res) => {
     res.json({ success: true, conversation });
 });
 
-app.post("/api/conversations/:id/messages", (req, res) => {
+app.post("/api/conversations/:id/messages", async (req, res) => {
     const conversation = conversations.find(
         (c) => c.id === req.params.id
     );
@@ -200,7 +198,7 @@ app.post("/api/conversations/:id/messages", (req, res) => {
 
     const { senderId, senderRole, originalText, targetLanguage } = req.body;
 
-    const translatedText = translationService.translateText(
+    const translatedText = await translationService.translateText(
         originalText,
         targetLanguage
     );
