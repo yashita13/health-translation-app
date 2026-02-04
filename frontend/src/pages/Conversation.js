@@ -16,6 +16,8 @@ import {
 } from "../services/translationService";
 import AudioRecorder from "../components/AudioRecorder";
 
+const STORAGE_KEY = "active_conversation";
+
 export default function Conversation() {
     const [conversation, setConversation] = useState(null);
     const [message, setMessage] = useState("");
@@ -26,32 +28,81 @@ export default function Conversation() {
 
     const chatEndRef = useRef(null);
 
+    // ================= INIT =================
     useEffect(() => {
         async function init() {
-            const conv = await createConversation();
-            setConversation(conv);
-            setMessages(conv.messages || []);
+            const stored = localStorage.getItem(STORAGE_KEY);
+
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                setConversation(parsed);
+                setMessages(parsed.messages || []);
+                setSummary(parsed.summary || null);
+            } else {
+                const conv = await createConversation();
+                setConversation(conv);
+                setMessages(conv.messages || []);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(conv));
+            }
         }
         init();
     }, []);
 
+    // ================= AUTO SCROLL =================
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    // ================= SEND MESSAGE =================
     const handleSend = async () => {
-        if (!message.trim()) return;
+        if (!message.trim() || !conversation) return;
 
-        const newMsg = await sendMessage(
-            conversation.id,
-            role === "doctor" ? "1" : "2",
-            role,
-            message,
-            targetLanguage
+        try {
+            const newMsg = await sendMessage(
+                conversation.id,
+                role === "doctor" ? "1" : "2",
+                role,
+                message,
+                targetLanguage
+            );
+
+            const updatedMessages = [...messages, newMsg];
+            const updatedConversation = {
+                ...conversation,
+                messages: updatedMessages,
+            };
+
+            setMessages(updatedMessages);
+            setConversation(updatedConversation);
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify(updatedConversation)
+            );
+
+            setMessage("");
+        } catch (err) {
+            alert("Message could not be sent");
+            console.error(err);
+        }
+    };
+
+    // ================= GENERATE SUMMARY =================
+    const handleGenerateSummary = async () => {
+        if (!conversation) return;
+
+        const generated = await generateSummary(conversation.id);
+
+        const updatedConversation = {
+            ...conversation,
+            summary: generated,
+        };
+
+        setSummary(generated);
+        setConversation(updatedConversation);
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(updatedConversation)
         );
-
-        setMessages((prev) => [...prev, newMsg]);
-        setMessage("");
     };
 
     return (
@@ -71,7 +122,7 @@ export default function Conversation() {
                 </Typography>
             </Box>
 
-            {/* Role & Language */}
+            {/* Controls */}
             <Box sx={{ p: 2, display: "flex", gap: 2 }}>
                 <Select value={role} onChange={(e) => setRole(e.target.value)}>
                     <MenuItem value="doctor">Doctor</MenuItem>
@@ -88,9 +139,9 @@ export default function Conversation() {
                 </Select>
             </Box>
 
-            {/* Main Layout */}
+            {/* Layout */}
             <Box sx={{ flex: 1, display: "grid", gridTemplateColumns: "2fr 1fr" }}>
-                {/* CHAT COLUMN */}
+                {/* CHAT */}
                 <Box
                     sx={{
                         display: "flex",
@@ -98,7 +149,6 @@ export default function Conversation() {
                         borderRight: "1px solid #e5e7eb",
                     }}
                 >
-                    {/* Messages */}
                     <Box
                         sx={{
                             flex: 1,
@@ -140,7 +190,6 @@ export default function Conversation() {
                                         <Typography sx={{ mt: 0.5 }}>
                                             {msg.originalText}
                                         </Typography>
-
                                         <Typography
                                             sx={{
                                                 mt: 0.5,
@@ -149,7 +198,17 @@ export default function Conversation() {
                                             }}
                                         >
                                             {msg.translatedText}
+                                            <Typography
+                                                variant="caption"
+                                                sx={{ opacity: 0.6, display: "block", mt: 0.5 }}
+                                            >
+                                                {msg.timestamp
+                                                    ? new Date(msg.timestamp).toLocaleString()
+                                                    : new Date().toLocaleString()}
+                                            </Typography>
+
                                         </Typography>
+
                                     </CardContent>
                                 </Card>
                             </Box>
@@ -157,7 +216,7 @@ export default function Conversation() {
                         <div ref={chatEndRef} />
                     </Box>
 
-                    {/* Input + Send */}
+                    {/* Input */}
                     <Box
                         sx={{
                             p: 2,
@@ -182,38 +241,46 @@ export default function Conversation() {
                         </Button>
                     </Box>
 
-                    {/* Audio + Summary Button */}
+                    {/* Audio + Summary */}
                     <Box sx={{ p: 2 }}>
                         <AudioRecorder
                             senderRole={role}
                             targetLanguage={targetLanguage}
-                            onAudioSent={(data) =>
-                                setMessages((prev) => [
-                                    ...prev,
+                            onAudioSent={(data) => {
+                                const updated = [
+                                    ...messages,
                                     {
                                         id: Date.now(),
                                         senderRole: role,
                                         originalText: data.transcription,
                                         translatedText: data.translated,
                                     },
-                                ])
-                            }
+                                ];
+                                const updatedConversation = {
+                                    ...conversation,
+                                    messages: updated,
+                                };
+                                setMessages(updated);
+                                setConversation(updatedConversation);
+                                localStorage.setItem(
+                                    STORAGE_KEY,
+                                    JSON.stringify(updatedConversation)
+                                );
+                            }}
                         />
 
                         <Button
                             variant="outlined"
                             sx={{ mt: 2 }}
-                            onClick={async () =>
-                                setSummary(await generateSummary(conversation.id))
-                            }
+                            onClick={handleGenerateSummary}
                         >
                             Generate Medical Summary
                         </Button>
                     </Box>
                 </Box>
 
-                {/* SUMMARY COLUMN */}
-                <Box sx={{ p: 3, backgroundColor: "#ffffff" }}>
+                {/* SUMMARY */}
+                <Box sx={{ p: 3 }}>
                     <Typography variant="h6" sx={{ mb: 2 }}>
                         Consultation Summary
                     </Typography>
