@@ -16,7 +16,8 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 // ==================== FILE STORAGE ====================
 
@@ -137,16 +138,12 @@ app.post("/api/translate/text", async (req, res) => {
 
 app.post("/api/translate/audio", upload.single("audio"), async (req, res) => {
     if (!req.file) {
-        return res
-            .status(400)
-            .json({ success: false, message: "No audio file" });
+        return res.status(400).json({ success: false });
     }
 
     const { senderRole, targetLanguage } = req.body;
 
-    const transcription =
-        translationService.transcribeAudio(senderRole);
-
+    const transcription = translationService.transcribeAudio(senderRole);
     const translated = await translationService.translateText(
         transcription,
         targetLanguage
@@ -159,8 +156,8 @@ app.post("/api/translate/audio", upload.single("audio"), async (req, res) => {
         translated,
         timestamp: new Date().toISOString(),
     });
-}
-);
+});
+
 
 // ==================== CONVERSATIONS ====================
 
