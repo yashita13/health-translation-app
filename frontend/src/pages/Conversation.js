@@ -27,7 +27,7 @@ export default function Conversation() {
     const [role, setRole] = useState("doctor");
     const [targetLanguage, setTargetLanguage] = useState("es");
 
-    const chatEndRef = useRef(null);
+    const chatContainerRef = useRef(null);
 
     // ================= INIT =================
     useEffect(() => {
@@ -49,9 +49,12 @@ export default function Conversation() {
         init();
     }, []);
 
-    // ================= AUTO SCROLL =================
+    // ================= AUTO SCROLL (CHAT ONLY) =================
     useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop =
+                chatContainerRef.current.scrollHeight;
+        }
     }, [messages]);
 
     // ================= SEND MESSAGE =================
@@ -107,7 +110,14 @@ export default function Conversation() {
     };
 
     return (
-        <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+        <Box
+            sx={{
+                height: "100vh",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden", // 🔒 lock page scroll
+            }}
+        >
             {/* Header */}
             <Box
                 sx={{
@@ -116,6 +126,7 @@ export default function Conversation() {
                     background:
                         "linear-gradient(90deg, #1e3a8a, #2563eb)",
                     color: "white",
+                    flexShrink: 0,
                 }}
             >
                 <Typography variant="h6">
@@ -124,7 +135,14 @@ export default function Conversation() {
             </Box>
 
             {/* Controls */}
-            <Box sx={{ p: 2, display: "flex", gap: 2 }}>
+            <Box
+                sx={{
+                    p: 2,
+                    display: "flex",
+                    gap: 2,
+                    flexShrink: 0,
+                }}
+            >
                 <Select value={role} onChange={(e) => setRole(e.target.value)}>
                     <MenuItem value="doctor">Doctor</MenuItem>
                     <MenuItem value="patient">Patient</MenuItem>
@@ -140,17 +158,27 @@ export default function Conversation() {
                 </Select>
             </Box>
 
-            {/* Layout */}
-            <Box sx={{ flex: 1, display: "grid", gridTemplateColumns: "2fr 1fr" }}>
+            {/* Main Layout */}
+            <Box
+                sx={{
+                    flex: 1,
+                    display: "grid",
+                    gridTemplateColumns: "2fr 1fr",
+                    overflow: "hidden", // 🔒 critical
+                }}
+            >
                 {/* CHAT */}
                 <Box
                     sx={{
                         display: "flex",
                         flexDirection: "column",
                         borderRight: "1px solid #e5e7eb",
+                        overflow: "hidden",
                     }}
                 >
+                    {/* Messages (ONLY SCROLLABLE AREA) */}
                     <Box
+                        ref={chatContainerRef}
                         sx={{
                             flex: 1,
                             p: 2,
@@ -191,6 +219,7 @@ export default function Conversation() {
                                         <Typography sx={{ mt: 0.5 }}>
                                             {msg.originalText}
                                         </Typography>
+
                                         <Typography
                                             sx={{
                                                 mt: 0.5,
@@ -199,30 +228,37 @@ export default function Conversation() {
                                             }}
                                         >
                                             {msg.translatedText}
-                                            <Typography
-                                                variant="caption"
-                                                sx={{ opacity: 0.6, display: "block", mt: 0.5 }}
-                                            >
-                                                {msg.timestamp
-                                                    ? new Date(msg.timestamp).toLocaleString()
-                                                    : new Date().toLocaleString()}
-                                            </Typography>
-
                                         </Typography>
+
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                opacity: 0.6,
+                                                display: "block",
+                                                mt: 0.5,
+                                            }}
+                                        >
+                                            {msg.timestamp
+                                                ? new Date(
+                                                    msg.timestamp
+                                                ).toLocaleString()
+                                                : new Date().toLocaleString()}
+                                        </Typography>
+
                                         {msg.audioUrl && (
                                             <audio
                                                 controls
                                                 src={`${API_BASE_URL}${msg.audioUrl}`}
-                                                style={{ marginTop: 8, width: "100%" }}
+                                                style={{
+                                                    marginTop: 8,
+                                                    width: "100%",
+                                                }}
                                             />
                                         )}
-
-
                                     </CardContent>
                                 </Card>
                             </Box>
                         ))}
-                        <div ref={chatEndRef} />
                     </Box>
 
                     {/* Input */}
@@ -233,6 +269,7 @@ export default function Conversation() {
                             gap: 1,
                             borderTop: "1px solid #e5e7eb",
                             backgroundColor: "white",
+                            flexShrink: 0,
                         }}
                     >
                         <TextField
@@ -250,8 +287,8 @@ export default function Conversation() {
                         </Button>
                     </Box>
 
-                    {/* Audio + Summary */}
-                    <Box sx={{ p: 2 }}>
+                    {/* Audio + Summary Actions */}
+                    <Box sx={{ p: 2, flexShrink: 0 }}>
                         <AudioRecorder
                             senderRole={role}
                             targetLanguage={targetLanguage}
@@ -267,10 +304,12 @@ export default function Conversation() {
                                         timestamp: new Date().toISOString(),
                                     },
                                 ];
+
                                 const updatedConversation = {
                                     ...conversation,
                                     messages: updated,
                                 };
+
                                 setMessages(updated);
                                 setConversation(updatedConversation);
                                 localStorage.setItem(
@@ -291,7 +330,12 @@ export default function Conversation() {
                 </Box>
 
                 {/* SUMMARY */}
-                <Box sx={{ p: 3 }}>
+                <Box
+                    sx={{
+                        p: 3,
+                        overflowY: "auto", // summary scrolls independently
+                    }}
+                >
                     <Typography variant="h6" sx={{ mb: 2 }}>
                         Consultation Summary
                     </Typography>
