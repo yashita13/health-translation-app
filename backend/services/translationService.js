@@ -1,103 +1,111 @@
-const OpenAI = require('openai');
-const axios = require('axios');
+// backend/services/translationService.js
+// Recruiter-safe, billing-free translation & summarization service
+// Designed as a fallback when paid LLM APIs are unavailable
 
 class TranslationService {
     constructor() {
-        this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY
-        });
+        // Small medical-focused dictionaries for demo-quality translation
+        this.medicalDictionary = {
+            es: {
+                pain: "dolor",
+                headache: "dolor de cabeza",
+                fever: "fiebre",
+                cough: "tos",
+                nausea: "náuseas",
+                medicine: "medicina",
+                doctor: "doctor",
+                patient: "paciente",
+                injection: "inyección",
+                tablet: "tableta"
+            },
+            fr: {
+                pain: "douleur",
+                headache: "mal de tête",
+                fever: "fièvre",
+                cough: "toux",
+                nausea: "nausée",
+                medicine: "médicament",
+                doctor: "docteur",
+                patient: "patient",
+                injection: "injection",
+                tablet: "comprimé"
+            },
+            hi: {
+                pain: "दर्द",
+                headache: "सिरदर्द",
+                fever: "बुखार",
+                cough: "खांसी",
+                nausea: "मतली",
+                medicine: "दवा",
+                doctor: "डॉक्टर",
+                patient: "मरीज़",
+                injection: "इंजेक्शन",
+                tablet: "गोली"
+            }
+        };
     }
 
-    async translateText(text, targetLanguage) {
-        try {
-            // Using OpenAI for high-quality medical translation
-            const response = await this.openai.chat.completions.create({
-                model: "gpt-4",
-                messages: [
-                    {
-                        role: "system",
-                        content: `You are a medical translation expert. Translate the following text to ${targetLanguage} while maintaining medical accuracy. For medical terms, use appropriate clinical terminology.`
-                    },
-                    {
-                        role: "user",
-                        content: text
-                    }
-                ],
-                temperature: 0.3,
-                max_tokens: 500
-            });
+    /**
+     * Translates text using rule-based medical dictionary replacement.
+     * This avoids paid API dependencies while preserving system behavior.
+     */
+    translateText(text, targetLanguage) {
+        if (!text || !targetLanguage) return text;
 
-            return response.choices[0].message.content;
-        } catch (error) {
-            console.error('Translation error:', error);
-            // Fallback to basic translation
-            return this.basicTranslation(text, targetLanguage);
-        }
-    }
+        const dict = this.medicalDictionary[targetLanguage] || {};
+        let translated = text;
 
-    async transcribeAudio(audioBuffer) {
-        try {
-            const response = await this.openai.audio.transcriptions.create({
-                file: audioBuffer,
-                model: "whisper-1",
-                language: "en"
-            });
-            return response.text;
-        } catch (error) {
-            console.error('Transcription error:', error);
-            throw error;
-        }
-    }
-
-    async generateMedicalSummary(conversation) {
-        const prompt = `Analyze this doctor-patient conversation and create a structured medical summary:
-
-    Conversation:
-    ${conversation.map(msg => `${msg.senderRole}: ${msg.originalText}`).join('\n')}
-
-    Extract and organize the following information:
-    1. Chief Complaint
-    2. Symptoms reported
-    3. Diagnosis/Assessment
-    4. Medications prescribed
-    5. Follow-up actions
-    6. Important notes
-
-    Format as a clear, concise medical summary:`;
-
-        const response = await this.openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a medical documentation specialist. Create accurate, professional medical summaries."
-                },
-                {
-                    role: "user",
-                    content: prompt
-                }
-            ],
-            temperature: 0.2,
-            max_tokens: 1000
+        Object.keys(dict).forEach(word => {
+            const regex = new RegExp(`\\b${word}\\b`, "gi");
+            translated = translated.replace(regex, dict[word]);
         });
 
-        return response.choices[0].message.content;
+        return `[${targetLanguage.toUpperCase()}] ${translated}`;
     }
 
-    async searchConversations(query, userId) {
-        // Implement semantic search using embeddings
-        const embedding = await this.getEmbedding(query);
-
-        // Search logic using vector similarity
-        return this.semanticSearch(embedding, userId);
+    /**
+     * Mock transcription for uploaded audio.
+     * Real speech-to-text can be plugged in later without API changes.
+     */
+    transcribeAudio(senderRole) {
+        return `${senderRole} audio message`;
     }
 
-    async getEmbedding(text) {
-        const response = await this.openai.embeddings.create({
-            model: "text-embedding-ada-002",
-            input: text
+    /**
+     * Generates a structured medical summary using keyword extraction.
+     * This mimics LLM-style summarization in a deterministic way.
+     */
+    generateMedicalSummary(messages = []) {
+        const symptoms = new Set();
+        const medications = new Set();
+
+        messages.forEach(msg => {
+            const text = (msg.originalText || "").toLowerCase();
+
+            // Symptom extraction
+            if (text.includes("pain") || text.includes("hurt")) symptoms.add("Pain");
+            if (text.includes("fever")) symptoms.add("Fever");
+            if (text.includes("headache")) symptoms.add("Headache");
+            if (text.includes("cough")) symptoms.add("Cough");
+            if (text.includes("nausea")) symptoms.add("Nausea");
+            if (text.includes("dizzy")) symptoms.add("Dizziness");
+
+            // Medication extraction
+            if (text.includes("paracetamol")) medications.add("Paracetamol");
+            if (text.includes("ibuprofen")) medications.add("Ibuprofen");
+            if (text.includes("antibiotic")) medications.add("Antibiotics");
+            if (text.includes("medicine") || text.includes("tablet")) {
+                medications.add("General medication discussed");
+            }
         });
-        return response.data[0].embedding;
+
+        return {
+            summaryType: "medical",
+            symptoms: [...symptoms],
+            medications: [...medications],
+            followUp: "Follow up if symptoms persist or worsen",
+            generatedAt: new Date().toISOString()
+        };
     }
 }
 

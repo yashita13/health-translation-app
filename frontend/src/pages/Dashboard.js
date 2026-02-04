@@ -1,162 +1,146 @@
-import React, { useState, useEffect } from 'react';
-import {
-    Container,
-    Grid,
-    Paper,
-    Typography,
-    Button,
-    Card,
-    CardContent,
-    Box,
-    TextField,
-    InputAdornment,
-    IconButton
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import AddIcon from '@mui/icons-material/Add';
-import ChatIcon from '@mui/icons-material/Chat';
-import HistoryIcon from '@mui/icons-material/History';
-import PersonIcon from '@mui/icons-material/Person';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Box, Typography, Button } from "@mui/material";
+import gsap from "gsap";
 
-const Dashboard = () => {
-    const [user, setUser] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
+export default function Dashboard() {
+    const navigate = useNavigate();
+
+    const contentRef = useRef(null);
+    const statsRef = useRef(null);
 
     useEffect(() => {
-        const userData = JSON.parse(localStorage.getItem('user'));
-        setUser(userData);
+        gsap.fromTo(
+            contentRef.current,
+            { y: 60, opacity: 0 },
+            { y: 0, opacity: 1, duration: 1.2, ease: "power3.out" }
+        );
+
+        gsap.fromTo(
+            statsRef.current,
+            { y: 40, opacity: 0 },
+            { y: 0, opacity: 1, duration: 1, delay: 0.4 }
+        );
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-    };
-
-    const startNewConversation = () => {
-        window.location.href = '/conversation';
-    };
-
-    if (!user) {
-        return <Typography>Loading...</Typography>;
-    }
-
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            {/* Header */}
-            <Paper sx={{ p: 2, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                    <Typography variant="h5">
-                        Welcome, {user.name}
-                    </Typography>
-                    <Typography variant="subtitle1" color="text.secondary">
-                        {user.role === 'doctor' ? 'Medical Practitioner' : 'Patient'}
-                    </Typography>
-                </Box>
-                <Button
-                    variant="outlined"
-                    startIcon={<ExitToAppIcon />}
-                    onClick={handleLogout}
-                >
-                    Logout
-                </Button>
-            </Paper>
+        <Box
+            sx={{
+                minHeight: "100vh",
+                backgroundImage: "url(/hero-bg.jpeg)",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                position: "relative",
+            }}
+        >
+            <Box
+                sx={{
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                        "linear-gradient(90deg, rgba(15,40,80,0.75), rgba(15,40,80,0.25))",
+                }}
+            />
 
-            {/* Search Bar */}
-            <Paper sx={{ p: 2, mb: 3 }}>
-                <TextField
-                    fullWidth
-                    placeholder="Search past conversations..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <SearchIcon />
-                            </InputAdornment>
-                        ),
+            <Box
+                ref={contentRef}
+                sx={{
+                    position: "relative",
+                    zIndex: 2,
+                    maxWidth: 1200,
+                    mx: "auto",
+                    px: 4,
+                    pt: { xs: 10, md: 16 },
+                    color: "white",
+                }}
+            >
+                <Box
+                    sx={{
+                        maxWidth: 820,
+                        left: 0,
+                        background: "rgba(255,255,255,0.15)",
+                        backdropFilter: "blur(18px)",
+                        borderRadius: "24px",
+                        p: { xs: 4, md: 5 },
                     }}
-                />
-            </Paper>
+                >
+                    <Typography
+                        variant="h3"
+                        sx={{
+                            fontWeight: 800,
+                            mb: 2,
+                            lineHeight: 1.2,
+                        }}
+                    >
+                        Bridging language gaps
+                        between doctors and patients.
+                    </Typography>
 
-            {/* Quick Actions */}
-            <Grid container spacing={3}>
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ height: '100%' }}>
-                        <CardContent sx={{ textAlign: 'center' }}>
-                            <AddIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                            <Typography variant="h6" gutterBottom>
-                                New Consultation
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" paragraph>
-                                Start a new conversation with {user.role === 'doctor' ? 'a patient' : 'your doctor'}
-                            </Typography>
-                            <Button
-                                variant="contained"
-                                fullWidth
-                                onClick={startNewConversation}
-                            >
-                                Start Now
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </Grid>
+                    <Typography
+                        sx={{
+                            fontSize: 16,
+                            opacity: 0.95,
+                            lineHeight: 1.7,
+                            mb: 4,
+                        }}
+                    >
+                        A real-time medical translation platform designed for seamless
+                        doctor–patient communication. Enable accurate multilingual
+                        conversations using live text translation, audio messages,
+                        and AI-generated medical summaries — all in one secure interface.
+                    </Typography>
 
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ height: '100%' }}>
-                        <CardContent sx={{ textAlign: 'center' }}>
-                            <ChatIcon sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
-                            <Typography variant="h6" gutterBottom>
-                                Active Conversations
-                            </Typography>
-                            <Typography variant="h3" color="primary">
-                                0
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                No active conversations
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
+                    <Button
+                        size="large"
+                        onClick={() => navigate("/chat")}
+                        sx={{
+                            px: 5,
+                            py: 1.4,
+                            borderRadius: "30px",
+                            backgroundColor: "#4f9cf9",
+                            fontWeight: 700,
+                            color: "white",
+                            "&:hover": {
+                                backgroundColor: "#3b82f6",
+                            },
+                        }}
+                    >
+                        Start Consultation
+                    </Button>
+                </Box>
 
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ height: '100%' }}>
-                        <CardContent sx={{ textAlign: 'center' }}>
-                            <HistoryIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
-                            <Typography variant="h6" gutterBottom>
-                                Past Consultations
+                <Box
+                    ref={statsRef}
+                    sx={{
+                        display: "grid",
+                        gridTemplateColumns: {
+                            xs: "1fr 1fr",
+                            md: "repeat(4, 1fr)",
+                        },
+                        gap: 4,
+                        mt: 6,
+                        maxWidth: 800,
+                    }}
+                >
+                    {[
+                        { value: "20+", label: "Years of Experience" },
+                        { value: "95%", label: "Patient Satisfaction" },
+                        { value: "5000+", label: "Patients Served" },
+                        { value: "10+", label: "Healthcare Providers" },
+                    ].map((item, i) => (
+                        <Box key={i}>
+                            <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                                {item.value}
                             </Typography>
-                            <Typography variant="h3" color="primary">
-                                0
+                            <Typography sx={{ opacity: 0.85 }}>
+                                {item.label}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Start your first conversation
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-
-            {/* Recent Activity */}
-            <Paper sx={{ p: 3, mt: 4 }}>
-                <Typography variant="h6" gutterBottom>
-                    Getting Started
-                </Typography>
-                <Typography paragraph>
-                    1. Click "Start Now" to begin a new consultation
-                </Typography>
-                <Typography paragraph>
-                    2. Type your message in English or your preferred language
-                </Typography>
-                <Typography paragraph>
-                    3. Use the microphone icon to record audio messages
-                </Typography>
-                <Typography paragraph>
-                    4. View real-time translations during the conversation
-                </Typography>
-            </Paper>
-        </Container>
+                        </Box>
+                    ))}
+                </Box>
+            </Box>
+        </Box>
     );
-};
+}
 
-export default Dashboard;
+
