@@ -282,18 +282,5 @@ app.get("/api/search", (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-    console.log(`
-🚀 Healthcare Translation Backend Running
------------------------------------------
-Server: http://localhost:${PORT}
-Health: http://localhost:${PORT}/api/health
-
-✔ Translation: Dynamic (rule-based)
-✔ Audio Upload: Enabled
-✔ Conversation Logging: Enabled
-✔ Search & Summary: Enabled
-✔ No Paid APIs Required
-
-Ready for recruiter review ✅
-`);
+    console.log(`Server running on port ${PORT}`);
 });
