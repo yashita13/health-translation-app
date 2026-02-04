@@ -274,7 +274,6 @@ export default function Conversation() {
                                         translatedText.toLowerCase().includes(searchQuery.toLowerCase())
                                     );
 
-                                const hasText = originalText.trim() || translatedText.trim();
                                 return (
                                     <Box
                                         key={msg.id}
