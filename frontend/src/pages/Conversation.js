@@ -103,10 +103,7 @@ export default function Conversation() {
 
     // ================= SEND MESSAGE =================
     const handleSend = async () => {
-        if (!conversation?.id) {
-            alert("Conversation not ready yet");
-            return;
-        }
+        if (!conversation?.id) return;
 
         if (!message.trim() || !conversation) return;
 
@@ -347,6 +344,12 @@ export default function Conversation() {
                             })}
                     </Box>
 
+                    {!conversation?.id && (
+                        <Typography variant="caption" sx={{ color: "gray" }}>
+                            Initializing conversation…
+                        </Typography>
+                    )}
+
                     {/* Input */}
                     <Box
                         sx={{
@@ -363,7 +366,11 @@ export default function Conversation() {
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
                         />
-                        <Button variant="contained" onClick={handleSend}>
+                        <Button
+                            variant="contained"
+                            onClick={handleSend}
+                            disabled={!conversation?.id || !message.trim()}
+                        >
                             Send
                         </Button>
                     </Box>
