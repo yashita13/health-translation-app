@@ -4,7 +4,12 @@ import MicIcon from "@mui/icons-material/Mic";
 import StopIcon from "@mui/icons-material/Stop";
 import { uploadAudio } from "../services/translationService";
 
-export default function AudioRecorder({ senderRole, targetLanguage, onAudioSent }) {
+export default function AudioRecorder({
+    senderRole,
+    targetLanguage,
+    conversationId,
+    onAudioSent,
+}) {
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const [recording, setRecording] = useState(false);
@@ -34,20 +39,23 @@ export default function AudioRecorder({ senderRole, targetLanguage, onAudioSent 
                 return;
             }
 
-            const response = await uploadAudio(
-                audioBlob,
-                senderRole,
-                targetLanguage
-            );
+            try {
+                // 🔥 send conversationId to backend
+                const message = await uploadAudio(
+                    audioBlob,
+                    senderRole,
+                    targetLanguage,
+                    conversationId
+                );
 
-            onAudioSent({
-                id: Date.now(),
-                senderRole,
-                originalText: response.transcription,
-                translatedText: response.translated,
-                audioUrl: response.audioUrl,
-                timestamp: response.timestamp,
-            });
+                // 🔥 backend-generated message only
+                if (message) {
+                    onAudioSent(message);
+                }
+            } catch (err) {
+                console.error("Audio upload failed:", err);
+                alert("Audio message could not be sent");
+            }
         };
 
         mediaRecorderRef.current = mediaRecorder;
@@ -56,8 +64,10 @@ export default function AudioRecorder({ senderRole, targetLanguage, onAudioSent 
     };
 
     const stopRecording = () => {
-        mediaRecorderRef.current.stop();
-        setRecording(false);
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            setRecording(false);
+        }
     };
 
     return (

@@ -141,7 +141,18 @@ app.post("/api/translate/audio", upload.single("audio"), async (req, res) => {
         return res.status(400).json({ success: false });
     }
 
-    const { senderRole, targetLanguage } = req.body;
+    const { senderRole, targetLanguage, conversationId } = req.body;
+
+    const conversation = conversations.find(
+        (c) => c.id === conversationId
+    );
+
+    if (!conversation) {
+        return res
+            .status(404)
+            .json({ success: false, message: "Conversation not found" });
+    }
+
 
     const transcription = translationService.transcribeAudio(senderRole);
     const translated = await translationService.translateText(
@@ -149,13 +160,19 @@ app.post("/api/translate/audio", upload.single("audio"), async (req, res) => {
         targetLanguage
     );
 
-    res.json({
-        success: true,
+    const message = {
+        id: "msg-" + Date.now(),
+        senderRole,
+        originalText: transcription,
+        translatedText: translated,
         audioUrl: `/uploads/audio/${req.file.filename}`,
-        transcription,
-        translated,
         timestamp: new Date().toISOString(),
-    });
+    };
+
+    conversation.messages.push(message);
+
+    res.status(201).json(message);
+
 });
 
 
@@ -179,7 +196,7 @@ app.post("/api/conversations", (req, res) => {
 
     conversations.push(conversation);
 
-    res.json({ success: true, conversation });
+    res.status(201).json(conversation);
 });
 
 app.post("/api/conversations/:id/messages", async (req, res) => {
@@ -212,8 +229,9 @@ app.post("/api/conversations/:id/messages", async (req, res) => {
 
     conversation.messages.push(message);
 
-    res.json({ success: true, message });
+    res.status(201).json(message);
 });
+
 
 // ==================== SUMMARY ====================
 

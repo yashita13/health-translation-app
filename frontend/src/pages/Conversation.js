@@ -26,8 +26,10 @@ export default function Conversation() {
     const [summary, setSummary] = useState(null);
     const [role, setRole] = useState("doctor");
     const [targetLanguage, setTargetLanguage] = useState("es");
+    const [searchQuery, setSearchQuery] = useState("");
 
     const chatContainerRef = useRef(null);
+    const matchRefs = useRef([]);
 
     // ================= INIT =================
     useEffect(() => {
@@ -49,6 +51,13 @@ export default function Conversation() {
         init();
     }, []);
 
+    useEffect(() => {
+        console.log("Conversation object:", conversation);
+        console.log("conversation.id:", conversation?.id);
+        console.log("conversation._id:", conversation?._id);
+    }, [conversation]);
+
+
     // ================= AUTO SCROLL (CHAT ONLY) =================
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -57,8 +66,48 @@ export default function Conversation() {
         }
     }, [messages]);
 
+    // ================= SCROLL TO FIRST SEARCH MATCH =================
+    useEffect(() => {
+        if (searchQuery && matchRefs.current[0]) {
+            matchRefs.current[0].scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+            });
+        }
+    }, [searchQuery]);
+
+    // ================= HIGHLIGHT HELPER =================
+    const highlightText = (text = "", query) => {
+        if (!text || !query) return text || "";
+
+        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`(${escapedQuery})`, "gi");
+
+        return text.split(regex).map((part, i) =>
+            part.toLowerCase() === query.toLowerCase() ? (
+                <mark
+                    key={i}
+                    style={{
+                        backgroundColor: "#fde68a",
+                        padding: "0 2px",
+                    }}
+                >
+                    {part}
+                </mark>
+            ) : (
+                part
+            )
+        );
+    };
+
+
     // ================= SEND MESSAGE =================
     const handleSend = async () => {
+        if (!conversation?.id) {
+            alert("Conversation not ready yet");
+            return;
+        }
+
         if (!message.trim() || !conversation) return;
 
         try {
@@ -69,6 +118,8 @@ export default function Conversation() {
                 message,
                 targetLanguage
             );
+
+            if (!newMsg) return;
 
             const updatedMessages = [...messages, newMsg];
             const updatedConversation = {
@@ -82,20 +133,40 @@ export default function Conversation() {
                 STORAGE_KEY,
                 JSON.stringify(updatedConversation)
             );
-
             setMessage("");
         } catch (err) {
+            const backendMsg = err?.response?.data?.message;
+
+            console.error("Send message failed:", err);
+
+            // 🔥 IMPORTANT: handle backend memory reset
+            if (backendMsg === "Conversation not found") {
+                alert("Conversation expired. Creating a new one…");
+
+                try {
+                    const newConv = await createConversation();
+                    setConversation(newConv);
+                    setMessages([]);
+                    localStorage.setItem(
+                        STORAGE_KEY,
+                        JSON.stringify(newConv)
+                    );
+                } catch (e) {
+                    alert("Failed to recreate conversation");
+                }
+                return;
+            }
+
             alert("Message could not be sent");
-            console.error(err);
         }
     };
+
 
     // ================= GENERATE SUMMARY =================
     const handleGenerateSummary = async () => {
         if (!conversation) return;
 
         const generated = await generateSummary(conversation.id);
-
         const updatedConversation = {
             ...conversation,
             summary: generated,
@@ -109,13 +180,15 @@ export default function Conversation() {
         );
     };
 
+    matchRefs.current = [];
+
     return (
         <Box
             sx={{
                 height: "100vh",
                 display: "flex",
                 flexDirection: "column",
-                overflow: "hidden", // 🔒 lock page scroll
+                overflow: "hidden",
             }}
         >
             {/* Header */}
@@ -135,14 +208,7 @@ export default function Conversation() {
             </Box>
 
             {/* Controls */}
-            <Box
-                sx={{
-                    p: 2,
-                    display: "flex",
-                    gap: 2,
-                    flexShrink: 0,
-                }}
-            >
+            <Box sx={{ p: 2, display: "flex", gap: 2, flexShrink: 0 }}>
                 <Select value={role} onChange={(e) => setRole(e.target.value)}>
                     <MenuItem value="doctor">Doctor</MenuItem>
                     <MenuItem value="patient">Patient</MenuItem>
@@ -156,6 +222,14 @@ export default function Conversation() {
                     <MenuItem value="fr">French</MenuItem>
                     <MenuItem value="hi">Hindi</MenuItem>
                 </Select>
+
+                {/* 🔍 SEARCH */}
+                <TextField
+                    fullWidth
+                    placeholder="Search conversation…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
             </Box>
 
             {/* Main Layout */}
@@ -164,7 +238,7 @@ export default function Conversation() {
                     flex: 1,
                     display: "grid",
                     gridTemplateColumns: "2fr 1fr",
-                    overflow: "hidden", // 🔒 critical
+                    overflow: "hidden",
                 }}
             >
                 {/* CHAT */}
@@ -176,89 +250,103 @@ export default function Conversation() {
                         overflow: "hidden",
                     }}
                 >
-                    {/* Messages (ONLY SCROLLABLE AREA) */}
+                    {/* Messages */}
                     <Box
                         ref={chatContainerRef}
                         sx={{
                             flex: 1,
-                            p: 2,
+                            px: 3,
+                            py: 2,
                             overflowY: "auto",
                             backgroundColor: "#f8fafc",
                         }}
                     >
-                        {messages.map((msg) => (
-                            <Box
-                                key={msg.id}
-                                sx={{
-                                    display: "flex",
-                                    justifyContent:
-                                        msg.senderRole === "doctor"
-                                            ? "flex-start"
-                                            : "flex-end",
-                                    mb: 2,
-                                }}
-                            >
-                                <Card
-                                    sx={{
-                                        maxWidth: "75%",
-                                        backgroundColor:
-                                            msg.senderRole === "doctor"
-                                                ? "#e0f2fe"
-                                                : "#ecfdf5",
-                                        borderRadius: 3,
-                                    }}
-                                >
-                                    <CardContent>
-                                        <Typography
-                                            variant="caption"
-                                            sx={{ fontWeight: 700 }}
-                                        >
-                                            {msg.senderRole}
-                                        </Typography>
+                        {messages
+                            .filter(Boolean)
+                            .map((msg, idx) => {
+                                const originalText = msg?.originalText || "";
+                                const translatedText = msg?.translatedText || "";
 
-                                        <Typography sx={{ mt: 0.5 }}>
-                                            {msg.originalText}
-                                        </Typography>
+                                const isMatch =
+                                    searchQuery &&
+                                    (
+                                        originalText.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        translatedText.toLowerCase().includes(searchQuery.toLowerCase())
+                                    );
 
-                                        <Typography
+                                const hasText = originalText.trim() || translatedText.trim();
+                                const isAudioOnly = msg?.audioUrl && !hasText;
+                                return (
+                                    <Box
+                                        key={msg.id}
+                                        ref={(el) =>
+                                            isMatch &&
+                                            matchRefs.current.push(el)
+                                        }
+                                        sx={{
+                                            display: "flex",
+                                            justifyContent:
+                                                msg.senderRole === "doctor"
+                                                    ? "flex-start"
+                                                    : "flex-end",
+                                            mb: 2,
+                                        }}
+                                    >
+                                        <Card
                                             sx={{
-                                                mt: 0.5,
-                                                color: "#2563eb",
-                                                fontSize: 14,
+                                                width: "fit-content",
+                                                maxWidth: "70%",
+                                                minWidth: msg.audioUrl ? 260 : "auto",
+                                                backgroundColor:
+                                                    msg.senderRole === "doctor"
+                                                        ? "#e0f2fe"
+                                                        : "#ecfdf5",
+                                                borderRadius: 3,
                                             }}
                                         >
-                                            {msg.translatedText}
-                                        </Typography>
+                                            <CardContent>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{ fontWeight: 700 }}
+                                                >
+                                                    {msg.senderRole}
+                                                </Typography>
 
-                                        <Typography
-                                            variant="caption"
-                                            sx={{
-                                                opacity: 0.6,
-                                                display: "block",
-                                                mt: 0.5,
-                                            }}
-                                        >
-                                            {msg.timestamp
-                                                ? new Date(
-                                                    msg.timestamp
-                                                ).toLocaleString()
-                                                : new Date().toLocaleString()}
-                                        </Typography>
+                                                <Typography sx={{ mt: 0.5 }}>
+                                                    {highlightText(
+                                                        msg.originalText,
+                                                        searchQuery
+                                                    )}
+                                                </Typography>
 
-                                        {msg.audioUrl && (
-                                            <audio
-                                                controls
-                                                src={`${API_BASE_URL}${msg.audioUrl}`}
-                                                style={{
-                                                    marginTop: 8,
-                                                    width: "100%",
-                                                }}
-                                            />
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </Box>
-                        ))}
+                                                <Typography
+                                                    sx={{
+                                                        mt: 0.5,
+                                                        color: "#2563eb",
+                                                        fontSize: 14,
+                                                    }}
+                                                >
+                                                    {highlightText(
+                                                        msg.translatedText,
+                                                        searchQuery
+                                                    )}
+                                                </Typography>
+
+                                                {msg.audioUrl && (
+                                                    <audio
+                                                        controls
+                                                        src={`${API_BASE_URL}${msg.audioUrl}`}
+                                                        style={{
+                                                            marginTop: 8,
+                                                            width: "100%",
+                                                        }}
+                                                    />
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </Box>
+                                );
+                            })}
                     </Box>
 
                     {/* Input */}
@@ -269,7 +357,6 @@ export default function Conversation() {
                             gap: 1,
                             borderTop: "1px solid #e5e7eb",
                             backgroundColor: "white",
-                            flexShrink: 0,
                         }}
                     >
                         <TextField
@@ -278,46 +365,38 @@ export default function Conversation() {
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
                         />
-                        <Button
-                            variant="contained"
-                            onClick={handleSend}
-                            sx={{ px: 4 }}
-                        >
+                        <Button variant="contained" onClick={handleSend}>
                             Send
                         </Button>
                     </Box>
 
-                    {/* Audio + Summary Actions */}
-                    <Box sx={{ p: 2, flexShrink: 0 }}>
-                        <AudioRecorder
-                            senderRole={role}
-                            targetLanguage={targetLanguage}
-                            onAudioSent={(data) => {
-                                const updated = [
-                                    ...messages,
-                                    {
-                                        id: Date.now(),
-                                        senderRole: role,
-                                        originalText: data.transcription,
-                                        translatedText: data.translated,
-                                        audioUrl: data.audioUrl,
-                                        timestamp: new Date().toISOString(),
-                                    },
-                                ];
+                    {/* Audio + Summary */}
+                    <Box sx={{ p: 2 }}>
+                        {conversation && (
+                            <AudioRecorder
+                                senderRole={role}
+                                targetLanguage={targetLanguage}
+                                conversationId={conversation.id}
+                                onAudioSent={(message) => {
+                                    if (!message) return;
 
-                                const updatedConversation = {
-                                    ...conversation,
-                                    messages: updated,
-                                };
+                                    setMessages((prev) => [...prev, message]);
 
-                                setMessages(updated);
-                                setConversation(updatedConversation);
-                                localStorage.setItem(
-                                    STORAGE_KEY,
-                                    JSON.stringify(updatedConversation)
-                                );
-                            }}
-                        />
+                                    const updatedConversation = {
+                                        ...conversation,
+                                        messages: [...conversation.messages, message],
+                                    };
+
+                                    setConversation(updatedConversation);
+                                    localStorage.setItem(
+                                        STORAGE_KEY,
+                                        JSON.stringify(updatedConversation)
+                                    );
+                                }}
+                            />
+                        )}
+
+
 
                         <Button
                             variant="outlined"
@@ -330,12 +409,7 @@ export default function Conversation() {
                 </Box>
 
                 {/* SUMMARY */}
-                <Box
-                    sx={{
-                        p: 3,
-                        overflowY: "auto", // summary scrolls independently
-                    }}
-                >
+                <Box sx={{ p: 3, overflowY: "auto" }}>
                     <Typography variant="h6" sx={{ mb: 2 }}>
                         Consultation Summary
                     </Typography>

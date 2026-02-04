@@ -38,13 +38,15 @@ export const translateText = async (text, targetLanguage) => {
 export const uploadAudio = async (
     audioBlob,
     senderRole,
-    targetLanguage
+    targetLanguage,
+    conversationId
 ) => {
     try {
         const formData = new FormData();
         formData.append("audio", audioBlob);
         formData.append("senderRole", senderRole);
         formData.append("targetLanguage", targetLanguage);
+        formData.append("conversationId", conversationId);
 
         const response = await api.post(
             "/api/translate/audio",
@@ -69,7 +71,7 @@ export const uploadAudio = async (
 export const createConversation = async () => {
     try {
         const response = await api.post("/api/conversations");
-        return response.data.conversation;
+        return response.data;
     } catch (error) {
         console.error("Create conversation failed", error);
         throw new Error("Unable to start conversation");
@@ -97,11 +99,14 @@ export const sendMessage = async (
             }
         );
 
-        return response.data.message;
-    } catch (error) {
-        console.error("Send message failed", error);
-        throw new Error("Message could not be sent");
+        return response.data;
+    } catch (err) {
+        console.error("Send message failed:", err);
+
+        // 🔥 VERY IMPORTANT
+        throw err;
     }
+
 };
 
 /**
