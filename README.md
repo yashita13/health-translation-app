@@ -1,74 +1,92 @@
-# Healthcare Doctor-Patient Translation Web Application
+# Healthcare Doctor–Patient Translation Web Application
 
-A real-time translation platform facilitating medical consultations between doctors and patients speaking different languages.
+A full-stack web application designed to facilitate multilingual medical consultations between doctors and patients using real-time text and audio translation.
+
+---
 
 ## Features Implemented
 
-✅ **Real-time Translation**
-- Doctor ↔ Patient bidirectional translation
-- Support for multiple languages (Spanish, French, Chinese, Arabic)
-- Real-time WebSocket communication
+### 1. Multilingual Text Translation
+- Real-time text translation between doctor and patient
+- Displays both original and translated messages
+- Supports multiple target languages (Spanish, French, Hindi)
+- Role-based message rendering for Doctor and Patient
 
-✅ **Dual Interface Chat**
-- Clean, intuitive chat UI with role-based theming
-- Visual distinction between Doctor/Patient messages
-- Message timestamps and status indicators
+### 2. Audio Recording, Transcription & Translation
+- Browser-based audio recording using MediaRecorder API
+- Uploads recorded audio to backend for processing
+- Automatically transcribes audio and translates the transcription
+- Displays playable audio messages within the chat thread
 
-✅ **Audio Recording & Playback**
-- Browser-based audio recording with visual feedback
-- Audio messages displayed in conversation thread
-- Playback controls for recorded messages
+### 3. Conversation Management
+- Each consultation initializes a unique conversation session
+- All text and audio messages are stored within the conversation context
+- Conversation state is persisted on the frontend for session continuity
 
-✅ **Conversation Logging**
-- Persistent conversation storage in MongoDB
-- Timestamps for all interactions
-- User authentication and session management
+### 4. AI-Powered Medical Summary
+- Generates a concise medical summary at any point during the conversation
+- Highlights medically important information such as:
+  - Symptoms
+  - Medications
+  - Follow-up actions
+- Helps clinicians quickly review key consultation details
 
-✅ **AI-Powered Summarization**
-- GPT-4 powered medical summary generation
-- Extracts symptoms, diagnoses, medications, follow-ups
-- Structured medical documentation
+### 5. Conversation Search
+- Keyword-based search across the conversation history
+- Highlights matching text within messages
+- Automatically scrolls to the first matched result
 
-✅ **Search Functionality**
-- Keyword search across conversation history
-- Semantic search using embeddings
-- Highlight matched content with context
+### 6. Robust UI & Error Handling
+- Graceful handling of backend cold starts on free hosting tiers
+- Prevents user actions until the conversation is fully initialized
+- Clear UI feedback for loading and disabled states
+- Defensive checks to avoid runtime errors
+
+---
 
 ## Tech Stack
 
-**Frontend:**
-- React 18 with Material-UI
-- Socket.IO client for real-time communication
-- Web Audio API for recording
-- Axios for API calls
+### Frontend
+- React (Create React App)
+- Material UI (MUI) for layout and components
+- Axios for REST API communication
+- MediaRecorder API for audio recording
 
-**Backend:**
-- Node.js with Express
-- Socket.IO for WebSockets
-- MongoDB with Mongoose ODM
-- OpenAI API (GPT-4, Whisper)
+### Backend
+- Node.js
+- Express.js
+- REST-based API architecture
+- In-memory conversation storage (for demo and evaluation purposes)
 
-**AI/ML:**
-- GPT-4 for translation and summarization
-- Whisper for speech-to-text
-- Embeddings for semantic search
+### Deployment
+- Frontend deployed on **Vercel**
+- Backend deployed on **Render**
+- Monorepo structure with separate frontend and backend directories
+- Environment-based configuration for API URLs
 
-**DevOps:**
-- Docker containerization
-- Environment-based configuration
-- CORS-enabled API
+---
 
-## Setup Instructions
+## Application Flow
 
-### Prerequisites
-- Node.js 18+
-- MongoDB 6+
-- Docker (optional)
-- OpenAI API key
+1. User opens the chat interface.
+2. A new conversation is initialized via the backend API.
+3. Doctor or patient sends text or audio messages.
+4. Messages are translated and displayed in real time.
+5. Audio messages are transcribed, translated, and playable.
+6. A medical summary can be generated at any stage.
+7. Users can search across the conversation history.
 
-### Local Development
+---
 
-1. **Clone repository:**
-```bash
-git clone <repository-url>
-cd healthcare-translation-app
+## Notes
+
+- The application focuses on functional completeness rather than full production persistence.
+- In-memory storage is used to simplify setup and evaluation.
+- The project was built under time constraints to demonstrate problem-solving, architecture decisions, and effective use of available tools.
+
+---
+
+## Live Demo
+
+Frontend: https://health-translation-app.vercel.app  
+Backend Render: https://dashboard.render.com/web/srv-d61pvjvgi27c73cc7e80/deploys/dep-d61pvk7gi27c73cc7ei0?r=2026-02-04%4019%3A35%3A48%7E2026-02-04%4019%3A38%3A33
