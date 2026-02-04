@@ -86,7 +86,5 @@ A full-stack web application designed to facilitate multilingual medical consult
 
 ---
 
-## Live Demo
-
-Frontend: https://health-translation-app.vercel.app  
-Backend Render: https://dashboard.render.com/web/srv-d61pvjvgi27c73cc7e80/deploys/dep-d61pvk7gi27c73cc7ei0?r=2026-02-04%4019%3A35%3A48%7E2026-02-04%4019%3A38%3A33
+## Live Demo Link
+https://health-translation-app.vercel.app  
