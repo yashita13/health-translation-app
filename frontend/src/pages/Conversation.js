@@ -25,7 +25,7 @@ export default function Conversation() {
     const [messages, setMessages] = useState([]);
     const [summary, setSummary] = useState(null);
     const [role, setRole] = useState("doctor");
-    const [targetLanguage, setTargetLanguage] = useState("es");
+    const [targetLanguage, setTargetLanguage] = useState("Spanish");
     const [searchQuery, setSearchQuery] = useState("");
 
     const chatContainerRef = useRef(null);
@@ -154,7 +154,7 @@ export default function Conversation() {
                 return;
             }
 
-            alert("Message could not be sent");
+            alert("Message could not be sent. Please try again after 30 seconds");
         }
     };
 
@@ -215,9 +215,17 @@ export default function Conversation() {
                     value={targetLanguage}
                     onChange={(e) => setTargetLanguage(e.target.value)}
                 >
-                    <MenuItem value="es">Spanish</MenuItem>
-                    <MenuItem value="fr">French</MenuItem>
-                    <MenuItem value="hi">Hindi</MenuItem>
+                    <MenuItem value="English">English</MenuItem>
+                    <MenuItem value="Hindi">Hindi</MenuItem>
+                    <MenuItem value="Spanish">Spanish</MenuItem>
+                    <MenuItem value="Chinese">Chinese (Mandarin)</MenuItem>
+                    <MenuItem value="Haitian Creole">Haitian Creole</MenuItem>
+                    <MenuItem value="Arabic">Arabic</MenuItem>
+                    <MenuItem value="French">French</MenuItem>
+                    <MenuItem value="Korean">Korean</MenuItem>
+                    <MenuItem value="Russian">Russian</MenuItem>
+                    <MenuItem value="Portuguese">Portuguese</MenuItem>
+                    <MenuItem value="Bengali">Bengali</MenuItem>
                 </Select>
 
                 {/* 🔍 SEARCH */}

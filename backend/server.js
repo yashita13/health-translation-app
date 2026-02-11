@@ -6,7 +6,7 @@ const path = require("path");
 const fs = require("fs");
 require("dotenv").config();
 
-const translationService = require("./services/translationService");
+const geminiService = require("./services/geminiService");
 
 const app = express();
 const server = http.createServer(app);
@@ -117,63 +117,77 @@ app.post("/api/auth/login", (req, res) => {
 // ==================== TRANSLATION ====================
 
 app.post("/api/translate/text", async (req, res) => {
-    const { text, targetLanguage } = req.body;
+    try {
+        const { text, targetLanguage } = req.body;
 
-    const translated = await translationService.translateText(
-        text,
-        targetLanguage
-    );
+        const translated = await geminiService.translateText(
+            text,
+            targetLanguage
+        );
 
-    res.json({
-        success: true,
-        original: text,
-        translated,
-        language: targetLanguage,
-        timestamp: new Date().toISOString(),
-    });
+        res.json({
+            success: true,
+            original: text,
+            translated,
+            language: targetLanguage,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error("Translation failed:", error);
+        res.status(500).json({ success: false, message: "Translation failed" });
+    }
 });
 
 
 // ==================== AUDIO ====================
 
 app.post("/api/translate/audio", upload.single("audio"), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false });
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false });
+        }
+
+        const { senderRole, targetLanguage, conversationId } = req.body;
+
+        const conversation = conversations.find(
+            (c) => c.id === conversationId
+        );
+
+        if (!conversation) {
+            return res
+                .status(404)
+                .json({ success: false, message: "Conversation not found" });
+        }
+
+        // 🔥 REAL GEMINI TRANSCRIPTION
+        const transcription = await geminiService.transcribeAudio(
+            req.file.path
+        );
+
+        const translatedText = await geminiService.translateText(
+            transcription,
+            targetLanguage
+        );
+
+        const message = {
+            id: "msg-" + Date.now(),
+            senderRole,
+            originalText: transcription,
+            translatedText,
+            audioUrl: `/uploads/audio/${req.file.filename}`,
+            timestamp: new Date().toISOString(),
+        };
+
+        conversation.messages.push(message);
+
+        res.status(201).json(message);
+
+    } catch (error) {
+        console.error("Audio processing failed:", error);
+        res.status(500).json({ success: false, message: "Audio failed" });
     }
-
-    const { senderRole, targetLanguage, conversationId } = req.body;
-
-    const conversation = conversations.find(
-        (c) => c.id === conversationId
-    );
-
-    if (!conversation) {
-        return res
-            .status(404)
-            .json({ success: false, message: "Conversation not found" });
-    }
-
-
-    const transcription = translationService.transcribeAudio(senderRole);
-    const translated = await translationService.translateText(
-        transcription,
-        targetLanguage
-    );
-
-    const message = {
-        id: "msg-" + Date.now(),
-        senderRole,
-        originalText: transcription,
-        translatedText: translated,
-        audioUrl: `/uploads/audio/${req.file.filename}`,
-        timestamp: new Date().toISOString(),
-    };
-
-    conversation.messages.push(message);
-
-    res.status(201).json(message);
-
 });
+
 
 
 // ==================== CONVERSATIONS ====================
@@ -200,42 +214,57 @@ app.post("/api/conversations", (req, res) => {
 });
 
 app.post("/api/conversations/:id/messages", async (req, res) => {
-    const conversation = conversations.find(
-        (c) => c.id === req.params.id
-    );
+    try {
+        const conversation = conversations.find(
+            (c) => c.id === req.params.id
+        );
 
-    if (!conversation) {
-        return res
-            .status(404)
-            .json({ success: false, message: "Conversation not found" });
+        if (!conversation) {
+            return res
+                .status(404)
+                .json({ success: false, message: "Conversation not found" });
+        }
+
+        const { senderId, senderRole, originalText, targetLanguage } = req.body;
+
+        const translatedText = await geminiService.translateText(
+            originalText,
+            targetLanguage
+        );
+
+        const message = {
+            id: "msg-" + Date.now(),
+            senderId,
+            senderRole,
+            originalText,
+            translatedText,
+            targetLanguage,
+            timestamp: new Date().toISOString(),
+        };
+
+        conversation.messages.push(message);
+
+        res.status(201).json(message);
     }
-
-    const { senderId, senderRole, originalText, targetLanguage } = req.body;
-
-    const translatedText = await translationService.translateText(
-        originalText,
-        targetLanguage
-    );
-
-    const message = {
-        id: "msg-" + Date.now(),
-        senderId,
-        senderRole,
-        originalText,
-        translatedText,
-        targetLanguage,
-        timestamp: new Date().toISOString(),
-    };
-
-    conversation.messages.push(message);
-
-    res.status(201).json(message);
+    catch (error) {
+        console.error("Message failed:", error);
+        res.status(500).json({ success: false, message: "Message failed" });
+    }
 });
+
+app.get("/api/models", async (req, res) => {
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models?key=${process.env.GEMINI_API_KEY}`
+    );
+    const data = await response.json();
+    res.json(data);
+});
+
 
 
 // ==================== SUMMARY ====================
 
-app.post("/api/summarize", (req, res) => {
+app.post("/api/summarize", async (req, res) => {
     const { conversationId } = req.body;
 
     const conversation = conversations.find(
@@ -248,7 +277,7 @@ app.post("/api/summarize", (req, res) => {
             .json({ success: false, message: "Conversation not found" });
     }
 
-    const summary = translationService.generateMedicalSummary(
+    const summary = await geminiService.generateMedicalSummary(
         conversation.messages
     );
 
